@@ -1,35 +1,76 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
+const fs = require("fs");
+const fetch = require("node-fetch");
 
 const app = express();
 app.use(bodyParser.json());
 app.use(cors());
 
+const FILE = "donations.json";
+const GAS_URL = "https://script.google.com/macros/s/ISI_URL_GAS_KAMU/exec";
+
+// ================= LOAD DATA =================
 let donations = [];
-let lastId = null;
+if (fs.existsSync(FILE)) {
+    donations = JSON.parse(fs.readFileSync(FILE));
+}
 
-// WEBHOOK
-app.post("/webhook", (req, res) => {
-    const data = req.body;
+// ================= SAVE =================
+function saveData() {
+    fs.writeFileSync(FILE, JSON.stringify(donations, null, 2));
+}
 
-    const id = data.id || Date.now().toString();
-    const donator = data.name || data.donator_name || "Anonymous";
-    const amount = data.amount || data.amount_raw || 0;
-    const message = data.message || "";
+// ================= WEBHOOK =================
+app.post("/webhook", async (req, res) => {
+    try {
+        const data = req.body;
 
-    if (donations.find(d => d.id === id)) {
-        return res.json({ status: "duplicate" });
+        const id = data.id || Date.now().toString();
+        const donator = data.name || data.donator_name || "Anonymous";
+        const amount = data.amount || data.amount_raw || 0;
+        const message = data.message || "";
+
+        // ✅ anti duplicate (berdasarkan ID)
+        if (donations.some(d => d.id === id)) {
+            return res.json({ status: "duplicate" });
+        }
+
+        const newData = {
+            id,
+            donator,
+            amount,
+            message,
+            date: new Date()
+        };
+
+        donations.push(newData);
+        saveData();
+
+        console.log("🔥 DONASI:", donator, amount);
+
+        // ================= KIRIM KE GAS =================
+        try {
+            await fetch(GAS_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(newData)
+            });
+        } catch (err) {
+            console.log("❌ GAS ERROR:", err);
+        }
+
+        res.json({ status: "ok" });
+
+    } catch (err) {
+        res.json({ status: "error" });
     }
-
-    donations.push({ id, donator, amount, message });
-
-    console.log("🔥 DONASI MASUK:", donator, amount);
-
-    res.json({ status: "ok" });
 });
 
-// ROBLOX AMBIL DATA
+// ================= DATA BARU =================
+let lastId = null;
+
 app.get("/donations", (req, res) => {
     let newData = [];
 
@@ -48,9 +89,16 @@ app.get("/donations", (req, res) => {
     });
 });
 
-// PORT (WAJIB untuk Render)
-const PORT = process.env.PORT || 3000;
+// ================= ALL DATA =================
+app.get("/all", (req, res) => {
+    res.json({
+        total: donations.length,
+        data: donations
+    });
+});
 
+// ================= PORT =================
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log("SERVER JALAN DI PORT", PORT);
+    console.log("SERVER RUNNING", PORT);
 });
