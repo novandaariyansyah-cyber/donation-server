@@ -9,7 +9,7 @@ app.use(bodyParser.json());
 app.use(cors());
 
 const FILE = "donations.json";
-const GAS_URL = "https://script.google.com/macros/s/ISI_URL_GAS_KAMU/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzPKqOTs77i_kLzrOKWRkhK-HSDYOgpibJ7T6xgdBIzY1yFQwRMxt7lCI2fPRwPjSHO/exec";
 
 // ================= LOAD DATA =================
 let donations = [];
