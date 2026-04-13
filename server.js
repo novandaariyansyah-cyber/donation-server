@@ -10,7 +10,7 @@ app.use(cors());
 
 const FILE = "donations.json";
 
-// ✅ GAS URL LO (SUDAH DIMASUKKAN)
+// ✅ GAS URL LO
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzPKqOTs77i_kLzrOKWRkhK-HSDYOgpibJ7T6xgdBIzY1yFQwRMxt7lCI2fPRwPjSHO/exec";
 
 // ================= LOAD DATA =================
@@ -52,18 +52,19 @@ app.post("/webhook", async (req, res) => {
 
         console.log("🔥 DONASI:", donator, amount);
 
-        // ================= KIRIM KE GAS (FIX FORMAT) =================
+        // ================= KIRIM KE GAS (FIX FINAL) =================
         try {
-            const response = await fetch(GAS_URL, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded"
-                },
-                body: "data=" + encodeURIComponent(JSON.stringify(newData))
-            });
+            const url =
+                GAS_URL +
+                "?id=" + encodeURIComponent(newData.id) +
+                "&donator=" + encodeURIComponent(newData.donator) +
+                "&amount=" + encodeURIComponent(newData.amount) +
+                "&message=" + encodeURIComponent(newData.message);
 
+            const response = await fetch(url);
             const text = await response.text();
-            console.log("📤 GAS RESPONSE:", text);
+
+            console.log("📤 GAS:", text);
 
         } catch (err) {
             console.log("❌ GAS ERROR:", err);
