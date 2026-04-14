@@ -7,7 +7,16 @@ let donations = [];
 
 console.log("🔥 VERSION FINAL AKTIF");
 
-// WEBHOOK
+// ========================================
+// ROOT TEST
+// ========================================
+app.get("/", (req, res) => {
+    res.send("SERVER RUNNING");
+});
+
+// ========================================
+// WEBHOOK DARI SOCIABUZZ
+// ========================================
 app.post("/webhook", (req, res) => {
     console.log("🔥 WEBHOOK MASUK");
 
@@ -23,22 +32,35 @@ app.post("/webhook", (req, res) => {
 
     donations.push(donation);
 
-    console.log("🔥 DONASI:", donation);
+    console.log("🔥 DONASI MASUK:", donation);
 
-    res.send("OK");
+    // 🔥 WAJIB TEXT (BIAR GA DUPLICATE)
+    res.setHeader("Content-Type", "text/plain");
+    res.status(200).send("OK");
 });
 
-// GET DATA
+// ========================================
+// ROBLOX AMBIL DATA
+// ========================================
 app.get("/donations", (req, res) => {
     res.json(donations);
 });
 
-// ROOT TEST
-app.get("/", (req, res) => {
-    res.send("SERVER RUNNING");
-});
+// ========================================
+// AUTO CLEAR (BIAR GA NUMPUK)
+// ========================================
+setInterval(() => {
+    if (donations.length > 100) {
+        donations = donations.slice(-50);
+        console.log("🧹 AUTO CLEAR DATA");
+    }
+}, 60000);
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log("🚀 Server jalan di port " + PORT);
+// ========================================
+// PORT FIX UNTUK RAILWAY
+// ========================================
+const PORT = process.env.PORT || 8080;
+
+app.listen(PORT, "0.0.0.0", () => {
+    console.log("🚀 SERVER RUNNING DI PORT " + PORT);
 });
