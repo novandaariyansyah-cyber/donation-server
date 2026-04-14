@@ -9,23 +9,32 @@ let donations = [];
 // 🔥 WEBHOOK DARI SOCIABUZZ
 // ========================================
 app.post("/webhook", (req, res) => {
-    const data = req.body;
+    try {
+        const data = req.body || {};
 
-    const donation = {
-        id: data.id || Date.now().toString(),
-        donator: data.donator_name || data.name || "Anonymous",
-        amount: data.amount_raw || data.amount || 0,
-        message: data.message || "",
-        time: Date.now() // 🔥 ini bikin setiap entry tetap unik
-    };
+        const donation = {
+            id: data.id || Date.now().toString(),
+            donator: data.donator_name || data.name || "Anonymous",
+            amount: Number(data.amount_raw || data.amount || 0),
+            message: data.message || "",
+            time: Date.now() // 🔥 UNIQUE TIME
+        };
 
-    // ✅ LANGSUNG MASUKKAN (TANPA CEK DUPLICATE)
-    donations.push(donation);
+        // ✅ TIDAK ADA DUPLICATE CHECK
+        donations.push(donation);
 
-    console.log("🔥 DONASI MASUK:", donation);
+        console.log("🔥 DONASI MASUK:", donation);
 
-    // ✅ RESPONSE WAJIB OK (BIAR SOCIABUZZ GAK ERROR)
-    res.json({ status: "ok" });
+        // 🔥 PENTING: HARUS TEXT, BUKAN JSON
+        res.setHeader("Content-Type", "text/plain");
+        res.status(200).send("OK");
+
+    } catch (err) {
+        console.error("❌ ERROR:", err);
+
+        res.setHeader("Content-Type", "text/plain");
+        res.status(200).send("OK"); // tetap OK biar Sociabuzz gak retry
+    }
 });
 
 // ========================================
@@ -36,14 +45,14 @@ app.get("/donations", (req, res) => {
 });
 
 // ========================================
-// 🧹 AUTO CLEAR (OPSIONAL)
+// 🧹 AUTO CLEAR (BIAR GAK NUMPUK)
 // ========================================
 setInterval(() => {
     if (donations.length > 100) {
-        donations = donations.slice(-50); // simpan 50 terakhir
+        donations = donations.slice(-50);
         console.log("🧹 AUTO CLEAR DATA");
     }
-}, 60000); // tiap 1 menit
+}, 60000);
 
 // ========================================
 app.get("/", (req, res) => {
