@@ -5,7 +5,7 @@ app.use(express.json());
 
 let donations = [];
 
-// 🔥 WEBHOOK DARI SOCIABUZZ
+// 🔥 WEBHOOK SOCIABUZZ
 app.post("/webhook", (req, res) => {
     const data = req.body;
 
@@ -14,27 +14,23 @@ app.post("/webhook", (req, res) => {
         donator: data.donator_name || data.name || "Anonymous",
         amount: data.amount_raw || data.amount || 0,
         message: data.message || "",
-        time: Date.now()
+        time: Date.now() // 🔥 INI YANG JADI UNIQUE
     };
 
+    // ❌ HAPUS CHECK DUPLICATE
+    // langsung push aja
     donations.push(donation);
 
     console.log("🔥 DONASI MASUK:", donation);
 
-    res.send("OK");
+    res.json({ status: "ok" });
 });
 
-// 🔥 ROBLOX AMBIL DATA
+// 🔥 ROBLOX AMBIL
 app.get("/donations", (req, res) => {
     res.json(donations);
 });
 
-// 🔥 CLEAR (opsional biar gak numpuk)
-app.get("/clear", (req, res) => {
-    donations = [];
-    res.send("CLEARED");
-});
-
 app.listen(3000, () => {
-    console.log("🚀 Server running on port 3000");
-});s
+    console.log("🚀 Server running");
+});
