@@ -6,14 +6,10 @@ app.use(express.json({ limit: "1mb" }));
 let donations = [];
 
 // =============================
-// ROOT
-// =============================
 app.get("/", (req, res) => {
-    res.send("🚀 Sociabuzz server running");
+    res.send("SERVER RUNNING");
 });
 
-// =============================
-// ENDPOINT ROBLOX
 // =============================
 app.get("/donations", (req, res) => {
     res.json({
@@ -23,46 +19,53 @@ app.get("/donations", (req, res) => {
 });
 
 // =============================
-// 🔥 WEBHOOK SOCIABUZZ (FIX UTAMA)
-// =============================
 app.post("/sociabuzz", (req, res) => {
     try {
-        console.log("🔥 RAW BODY:", JSON.stringify(req.body, null, 2));
+        const raw = req.body;
 
-        // 🔥 FIX: ambil dari nested "data"
-        const payload = req.body.data || req.body;
+        console.log("🔥 FULL PAYLOAD:");
+        console.log(JSON.stringify(raw, null, 2));
+
+        // ambil layer data (kadang nested)
+        const data = raw.data || raw;
+
+        // 🔥 ambil nama TANPA anonymous
+        let name =
+            data.supporter_name ||
+            data.name ||
+            data.username ||
+            data.display_name ||
+            data.user?.name ||
+            data.user ||
+            data.from ||
+            data.email;
+
+        // 🔥 kalau tetap tidak ada → paksa jadi string (biar kelihatan)
+        if (!name) {
+            name = "Sociabuzz User"; // bukan anonymous
+        }
 
         const newDonation = {
             id: Date.now().toString(),
-
-            // ✅ AMBIL NAMA YANG BENAR (STRUKTUR SOCIABUZZ)
-            donator:
-                payload.supporter_name ||
-                payload.name ||
-                payload.username ||
-                "Anonymous",
-
-            // ✅ NOMINAL
+            donator: String(name),
             amount:
-                Number(payload.amount) ||
-                Number(payload.amount_total) ||
-                Number(payload.price) ||
+                Number(data.amount) ||
+                Number(data.amount_total) ||
+                Number(data.price) ||
+                Number(data.value) ||
                 0,
-
-            // ✅ PESAN
             message:
-                payload.message ||
-                payload.comment ||
+                data.message ||
+                data.comment ||
+                data.notes ||
                 ""
         };
 
         donations.push(newDonation);
 
-        if (donations.length > 50) {
-            donations.shift();
-        }
+        if (donations.length > 50) donations.shift();
 
-        console.log("✅ DONATION MASUK:", newDonation);
+        console.log("✅ FINAL DATA:", newDonation);
 
         res.sendStatus(200);
     } catch (err) {
@@ -75,5 +78,5 @@ app.post("/sociabuzz", (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-    console.log("🚀 Server running on port", PORT);
+    console.log("RUNNING ON PORT", PORT);
 });
