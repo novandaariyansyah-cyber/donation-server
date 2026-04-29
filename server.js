@@ -1,59 +1,90 @@
 const express = require("express");
-const app = express(); // 🔥 INI YANG KAMU KURANG
+const app = express();
 
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json());
 
 let donations = [];
+const processedIds = new Set();
 
-// =============================
+console.log("🔥 SERVER SOCIABUZZ FINAL AKTIF");
+
+// ========================================
+// ROOT TEST
+// ========================================
 app.get("/", (req, res) => {
     res.send("SERVER RUNNING");
 });
 
-// =============================
-app.get("/donations", (req, res) => {
-    res.json({
-        status: "success",
-        data: donations
-    });
-});
-
-// =============================
-app.post("/sociabuzz", (req, res) => {
+// ========================================
+// WEBHOOK SOCIABUZZ (FORMAT ASLI)
+// ========================================
+app.post("/webhook", (req, res) => {
     try {
-        console.log("🔥 RAW:", JSON.stringify(req.body, null, 2));
+        const body = req.body || {};
 
-        const data = req.body.data || req.body;
+        console.log("📦 RAW:", JSON.stringify(body, null, 2));
 
-        const name = data.customer_name;
+        // 🔥 SUPPORT SEMUA FORMAT
+        const data = body.data || body;
 
-        // ❗ skip kalau tidak ada nama
-        if (!name || name.trim() === "") {
-            console.log("⛔ SKIP: tidak ada nama");
-            return res.sendStatus(200);
+        const id =
+            data.transaction_id ||   // Sociabuzz asli
+            data.id ||               // fallback
+            Date.now().toString();   // terakhir
+
+        // 🔥 ANTI DUPLICATE
+        if (processedIds.has(id)) {
+            console.log("⚠️ DUPLICATE DIABAIKAN:", id);
+            return res.send("OK");
         }
+        processedIds.add(id);
 
-        const newDonation = {
-            id: Date.now().toString(),
-            donator: name,
-            amount: Number(data.amount) || 0,
-            message: data.message || data.product_name || ""
+        const donation = {
+            id: id,
+            donator:
+                data.supporter_name ||
+                data.donator_name ||
+                data.name ||
+                "Anonymous",
+            amount: Number(
+                data.amount ||
+                data.amount_raw ||
+                0
+            ),
+            message: data.message || "",
+            time: Date.now()
         };
 
-        donations.push(newDonation);
+        donations.push(donation);
 
-        console.log("✅ FINAL:", newDonation);
+        // 🔥 LIMIT BIAR GA MEMBENGKAK
+        if (donations.length > 200) {
+            donations = donations.slice(-100);
+        }
 
-        res.sendStatus(200);
+        console.log("🔥 DONASI MASUK:");
+        console.log(JSON.stringify(donation, null, 2));
+
+        res.send("OK");
+
     } catch (err) {
         console.error("❌ ERROR:", err);
-        res.sendStatus(500);
+        res.status(500).send("ERROR");
     }
 });
 
-// =============================
-const PORT = process.env.PORT || 3000;
+// ========================================
+// GET DATA UNTUK ROBLOX
+// ========================================
+app.get("/donations", (req, res) => {
+    res.json(donations);
+});
 
-app.listen(PORT, () => {
-    console.log("🚀 RUNNING ON PORT", PORT);
+// ========================================
+// START SERVER (WAJIB UNTUK RAILWAY)
+// ========================================
+const PORT = process.env.PORT || 8080;
+
+app.listen(PORT, "0.0.0.0", () => {
+    console.log("🚀 SERVER RUNNING DI PORT " + PORT);
 });
