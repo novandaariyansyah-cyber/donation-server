@@ -1,66 +1,76 @@
 const express = require("express");
 const app = express();
 
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 
 let donations = [];
 
-console.log("🔥 VERSION FINAL AKTIF");
-
-// ========================================
-// ROOT TEST
-// ========================================
-app.get("/", (req, res) => {
-    res.send("SERVER RUNNING");
-});
-
-// ========================================
-// WEBHOOK DARI SOCIABUZZ
-// ========================================
-app.post("/webhook", (req, res) => {
-    console.log("🔥 WEBHOOK MASUK");
-
-    const data = req.body || {};
-
-    const donation = {
-        id: data.id || Date.now().toString(),
-        donator: data.donator_name || data.name || "Anonymous",
-        amount: Number(data.amount_raw || data.amount || 0),
-        message: data.message || "",
-        time: Date.now()
-    };
-
-    donations.push(donation);
-
-    console.log("🔥 DONASI MASUK:", donation);
-
-    // 🔥 WAJIB TEXT (BIAR GA DUPLICATE)
-    res.setHeader("Content-Type", "text/plain");
-    res.status(200).send("OK");
-});
-
-// ========================================
-// ROBLOX AMBIL DATA
-// ========================================
+// =============================
+// GET → ROBLOX (WAJIB FORMAT INI)
+// =============================
 app.get("/donations", (req, res) => {
-    res.json(donations);
+    res.json({
+        status: "success",
+        data: donations
+    });
 });
 
-// ========================================
-// AUTO CLEAR (BIAR GA NUMPUK)
-// ========================================
-setInterval(() => {
-    if (donations.length > 100) {
-        donations = donations.slice(-50);
-        console.log("🧹 AUTO CLEAR DATA");
+// =============================
+// 🔥 WEBHOOK SOCIABUZZ
+// =============================
+app.post("/sociabuzz", (req, res) => {
+    try {
+        const data = req.body;
+
+        console.log("🔥 RAW SOCIABUZZ:", data);
+
+        // ⚠️ Mapping fleksibel (karena field Sociabuzz bisa beda-beda)
+        const newDonation = {
+            id: Date.now().toString(),
+
+            // nama donatur
+            donator:
+                data.name ||
+                data.username ||
+                data.supporter_name ||
+                "Anonymous",
+
+            // nominal
+            amount:
+                Number(data.amount) ||
+                Number(data.amount_total) ||
+                Number(data.price) ||
+                0,
+
+            // pesan
+            message:
+                data.message ||
+                data.comment ||
+                ""
+        };
+
+        donations.push(newDonation);
+
+        // limit biar ringan
+        if (donations.length > 50) {
+            donations.shift();
+        }
+
+        console.log("✅ DONATION MASUK:", newDonation);
+
+        res.sendStatus(200);
+    } catch (err) {
+        console.error("❌ ERROR:", err);
+        res.sendStatus(500);
     }
-}, 60000);
+});
 
-// ========================================
-// PORT FIX UNTUK RAILWAY
-// ========================================
-const PORT = process.env.PORT || 8080;
+// =============================
+app.get("/", (req, res) => {
+    res.send("🚀 Sociabuzz webhook ready");
+});
 
-app.listen(PORT, "0.0.0.0", () => {
-    console.log("🚀 SERVER RUNNING DI PORT " + PORT);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log("Server running on port", PORT);
 });
