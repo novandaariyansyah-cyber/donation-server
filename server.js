@@ -6,10 +6,10 @@ app.use(express.json());
 let donations = [];
 const processedIds = new Set();
 
-console.log("🔥 SERVER SOCIABUZZ (NO ANONYMOUS) AKTIF");
+console.log("🔥 SERVER CONVERTER AKTIF");
 
 // ============================
-// ROOT TEST
+// ROOT
 // ============================
 app.get("/", (req, res) => {
     res.send("SERVER RUNNING");
@@ -21,70 +21,73 @@ app.get("/", (req, res) => {
 app.post("/webhook", (req, res) => {
     try {
         const body = req.body || {};
-
-        console.log("📦 RAW:");
-        console.log(JSON.stringify(body, null, 2));
-
         const data = body.data || body;
 
-        // 🚨 WAJIB ADA FIELD INI
-        if (!data.supporter_name || !data.amount) {
-            console.log("⚠️ DATA TIDAK VALID, DIABAIKAN");
+        console.log("📦 RAW:", JSON.stringify(body, null, 2));
+
+        // 🔥 AMBIL DATA SOCIABUZZ
+        const name = data.supporter_name || data.supporter;
+        const amount = Number(data.amount || data.amount_raw);
+        const message = data.message || "";
+
+        // ❌ JANGAN PROSES JIKA TIDAK VALID
+        if (!name || !amount) {
+            console.log("⚠️ DATA INVALID");
             return res.send("OK");
         }
 
         // 🔥 ID UNIK
         const id =
             data.transaction_id ||
-            data.id ||
-            (data.supporter_name + "_" + Date.now());
+            name + "_" + Date.now();
 
         // 🔥 ANTI DUPLICATE
         if (processedIds.has(id)) {
-            console.log("⚠️ DUPLICATE DIABAIKAN:", id);
+            console.log("⚠️ DUPLICATE:", id);
             return res.send("OK");
         }
         processedIds.add(id);
 
-        // 🔥 DATA FINAL (TANPA ANONYMOUS)
+        // 🔥 FORMAT INTERNAL
         const donation = {
             id: id,
-            donator: data.supporter_name,
-            amount: Number(data.amount),
-            message: data.message || "",
-            time: Date.now()
+            donator: name,
+            amount: amount,
+            message: message
         };
 
         donations.push(donation);
 
-        // 🔥 LIMIT BIAR GA BERAT
-        if (donations.length > 200) {
-            donations = donations.slice(-100);
+        // limit data
+        if (donations.length > 100) {
+            donations.shift();
         }
 
-        console.log("🔥 DONASI MASUK:");
-        console.log(JSON.stringify(donation, null, 2));
+        console.log("🔥 DONASI:", donation);
 
         res.send("OK");
 
     } catch (err) {
         console.error("❌ ERROR:", err);
-        res.status(500).send("ERROR");
+        res.send("OK");
     }
 });
 
 // ============================
-// GET DATA UNTUK ROBLOX
+// 🔥 OUTPUT KE ROBLOX (FORMAT LAMA)
 // ============================
 app.get("/donations", (req, res) => {
-    res.json(donations);
+    res.json({
+        status: "success",
+        data: donations
+    });
 });
 
 // ============================
-// START SERVER (RAILWAY)
+// START
 // ============================
 const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, "0.0.0.0", () => {
-    console.log("🚀 SERVER RUNNING DI PORT " + PORT);
+    console.log("🚀 RUNNING PORT " + PORT);
 });
