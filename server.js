@@ -6,7 +6,7 @@ app.use(express.json());
 let donations = [];
 const processedIds = new Set();
 
-console.log("🔥 SERVER SOCIABUZZ FINAL AKTIF");
+console.log("🔥 SERVER SOCIABUZZ (NO ANONYMOUS) AKTIF");
 
 // ============================
 // ROOT TEST
@@ -25,14 +25,19 @@ app.post("/webhook", (req, res) => {
         console.log("📦 RAW:");
         console.log(JSON.stringify(body, null, 2));
 
-        // 🔥 HANDLE SEMUA FORMAT
         const data = body.data || body;
 
-        // 🔥 ID UNIK (PENTING)
+        // 🚨 WAJIB ADA FIELD INI
+        if (!data.supporter_name || !data.amount) {
+            console.log("⚠️ DATA TIDAK VALID, DIABAIKAN");
+            return res.send("OK");
+        }
+
+        // 🔥 ID UNIK
         const id =
             data.transaction_id ||
             data.id ||
-            Date.now().toString();
+            (data.supporter_name + "_" + Date.now());
 
         // 🔥 ANTI DUPLICATE
         if (processedIds.has(id)) {
@@ -41,34 +46,18 @@ app.post("/webhook", (req, res) => {
         }
         processedIds.add(id);
 
-        // 🔥 NAMA DONATOR (SUPPORT SEMUA FORMAT)
-        const donator =
-            data.supporter ||          // ✅ FORMAT LO SEKARANG
-            data.supporter_name ||     // ✅ FORMAT SOCIABUZZ
-            data.donator_name ||
-            data.name ||
-            "Anonymous";
-
-        // 🔥 AMOUNT
-        const amount =
-            Number(data.amount) ||
-            Number(data.amount_raw) ||
-            0;
-
-        // 🔥 MESSAGE
-        const message = data.message || "";
-
+        // 🔥 DATA FINAL (TANPA ANONYMOUS)
         const donation = {
             id: id,
-            donator: donator,
-            amount: amount,
-            message: message,
+            donator: data.supporter_name,
+            amount: Number(data.amount),
+            message: data.message || "",
             time: Date.now()
         };
 
         donations.push(donation);
 
-        // 🔥 LIMIT DATA (BIAR GA BERAT)
+        // 🔥 LIMIT BIAR GA BERAT
         if (donations.length > 200) {
             donations = donations.slice(-100);
         }
@@ -85,7 +74,7 @@ app.post("/webhook", (req, res) => {
 });
 
 // ============================
-// GET UNTUK ROBLOX
+// GET DATA UNTUK ROBLOX
 // ============================
 app.get("/donations", (req, res) => {
     res.json(donations);
