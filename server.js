@@ -1,13 +1,14 @@
 const express = require("express");
 const app = express();
 
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json());
 
 let donations = [];
 
-// =============================
-// GET → ROBLOX (WAJIB FORMAT INI)
-// =============================
+app.get("/", (req, res) => {
+    res.send("SERVER HIDUP");
+});
+
 app.get("/donations", (req, res) => {
     res.json({
         status: "success",
@@ -15,62 +16,21 @@ app.get("/donations", (req, res) => {
     });
 });
 
-// =============================
-// 🔥 WEBHOOK SOCIABUZZ
-// =============================
 app.post("/sociabuzz", (req, res) => {
-    try {
-        const data = req.body;
+    console.log("MASUK:", req.body);
 
-        console.log("🔥 RAW SOCIABUZZ:", data);
+    donations.push({
+        id: Date.now().toString(),
+        donator: req.body.name || "Anonymous",
+        amount: Number(req.body.amount) || 0,
+        message: req.body.message || ""
+    });
 
-        // ⚠️ Mapping fleksibel (karena field Sociabuzz bisa beda-beda)
-        const newDonation = {
-            id: Date.now().toString(),
-
-            // nama donatur
-            donator:
-                data.name ||
-                data.username ||
-                data.supporter_name ||
-                "Anonymous",
-
-            // nominal
-            amount:
-                Number(data.amount) ||
-                Number(data.amount_total) ||
-                Number(data.price) ||
-                0,
-
-            // pesan
-            message:
-                data.message ||
-                data.comment ||
-                ""
-        };
-
-        donations.push(newDonation);
-
-        // limit biar ringan
-        if (donations.length > 50) {
-            donations.shift();
-        }
-
-        console.log("✅ DONATION MASUK:", newDonation);
-
-        res.sendStatus(200);
-    } catch (err) {
-        console.error("❌ ERROR:", err);
-        res.sendStatus(500);
-    }
-});
-
-// =============================
-app.get("/", (req, res) => {
-    res.send("🚀 Sociabuzz webhook ready");
+    res.sendStatus(200);
 });
 
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
-    console.log("Server running on port", PORT);
+    console.log("RUNNING ON PORT", PORT);
 });
