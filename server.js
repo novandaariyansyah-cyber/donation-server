@@ -3,19 +3,17 @@ const app = express();
 
 app.use(express.json({ limit: "1mb" }));
 
-// =============================
-// STORAGE (sementara)
 let donations = [];
 
 // =============================
-// ROOT CHECK
+// ROOT
 // =============================
 app.get("/", (req, res) => {
-    res.send("🚀 Sociabuzz webhook server RUNNING");
+    res.send("🚀 Sociabuzz server running");
 });
 
 // =============================
-// 🔥 ENDPOINT UNTUK ROBLOX
+// ENDPOINT ROBLOX
 // =============================
 app.get("/donations", (req, res) => {
     res.json({
@@ -25,44 +23,41 @@ app.get("/donations", (req, res) => {
 });
 
 // =============================
-// 🔥 WEBHOOK SOCIABUZZ
+// 🔥 WEBHOOK SOCIABUZZ (FIX UTAMA)
 // =============================
 app.post("/sociabuzz", (req, res) => {
     try {
-        const data = req.body;
+        console.log("🔥 RAW BODY:", JSON.stringify(req.body, null, 2));
 
-        console.log("🔥 RAW SOCIABUZZ:", JSON.stringify(data, null, 2));
+        // 🔥 FIX: ambil dari nested "data"
+        const payload = req.body.data || req.body;
 
         const newDonation = {
             id: Date.now().toString(),
 
-            // 🔥 FIX NAMA (ANTI ANONYMOUS)
+            // ✅ AMBIL NAMA YANG BENAR (STRUKTUR SOCIABUZZ)
             donator:
-                data.supporter_name ||
-                data.name ||
-                data.username ||
-                data.email ||
+                payload.supporter_name ||
+                payload.name ||
+                payload.username ||
                 "Anonymous",
 
-            // 🔥 FIX NOMINAL
+            // ✅ NOMINAL
             amount:
-                Number(data.amount) ||
-                Number(data.amount_total) ||
-                Number(data.price) ||
-                Number(data.donation_amount) ||
+                Number(payload.amount) ||
+                Number(payload.amount_total) ||
+                Number(payload.price) ||
                 0,
 
-            // 🔥 FIX MESSAGE
+            // ✅ PESAN
             message:
-                data.message ||
-                data.comment ||
-                data.notes ||
+                payload.message ||
+                payload.comment ||
                 ""
         };
 
         donations.push(newDonation);
 
-        // batasi biar gak overload
         if (donations.length > 50) {
             donations.shift();
         }
@@ -74,26 +69,6 @@ app.post("/sociabuzz", (req, res) => {
         console.error("❌ ERROR:", err);
         res.sendStatus(500);
     }
-});
-
-// =============================
-// OPTIONAL (kalau kamu masih pakai /webhook)
-// =============================
-app.post("/webhook", (req, res) => {
-    console.log("🔥 WEBHOOK FALLBACK:", req.body);
-
-    const data = req.body;
-
-    const newDonation = {
-        id: Date.now().toString(),
-        donator: data.supporter_name || data.name || "Anonymous",
-        amount: Number(data.amount) || 0,
-        message: data.message || ""
-    };
-
-    donations.push(newDonation);
-
-    res.sendStatus(200);
 });
 
 // =============================
